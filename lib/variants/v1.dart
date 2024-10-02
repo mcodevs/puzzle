@@ -18,22 +18,7 @@ class _PolygonAreaState extends State<PolygonArea> {
   static const double blockOffsetY = 600;
 
   // Initial positions for blocks (outside the container)
-  List<Block> blocks = [
-    Block(
-      size: const Size(200, 100),
-      offset: const Offset(
-        50,
-        blockOffsetY,
-      ),
-    ),
-    Block(
-      size: const Size(100, 150),
-      offset: const Offset(
-        200,
-        blockOffsetY,
-      ),
-    ),
-  ];
+  List<Block> blocks = getBlocks();
 
   Offset containerPosition =
       Offset.zero; // Will store the position of the container on the screen
@@ -145,78 +130,118 @@ class _PolygonAreaState extends State<PolygonArea> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      layout = constraints.biggest;
-
-      // Calculate the position of the container in the center of the screen
-      containerPosition = Offset(
-        (layout.width - containerSize) / 2,
-        (layout.height - containerSize) / 2,
-      );
-
-      return Stack(
-        children: [
-          // The 300x300 container where snapping should occur
-          Positioned(
-            left: containerPosition.dx,
-            top: containerPosition.dy,
-            child: Container(
-              width: containerSize,
-              height: containerSize,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-              ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Containers in Polygon'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () {
+              setState(() {
+                blocks = getBlocks();
+              });
+            },
+            icon: const Icon(
+              Icons.refresh,
             ),
-          ),
-          // The draggable blocks
-          ...List.generate(
-            blocks.length,
-            (index) {
-              return Positioned(
-                left: blocks[index].offset.dx,
-                top: blocks[index].offset.dy,
-                child: GestureDetector(
-                  onLongPress: () {
-                    showCupertinoModalPopup(
-                      context: context,
-                      builder: (context) => CupertinoActionSheet(
-                        cancelButton: CupertinoActionSheetAction(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("Yo'q"),
-                        ),
-                        title: const Text("Ushbu blokni o'chirmoqchimisiz?"),
-                        actions: [
-                          CupertinoActionSheetAction(
-                            onPressed: () {
-                              setState(() {
-                                blocks[index] = blocks[index].copyWith(
-                                  inside: false,
-                                  offset: blocks[index].initialOffset,
-                                );
-                              });
-                              Navigator.pop(context);
-                            },
-                            isDestructiveAction: true,
-                            child: const Text("Ha"),
-                          )
-                        ],
-                      ),
-                    );
-                  },
-                  onPanUpdate: (details) => _updatePosition(index, details),
-                  onPanEnd: (_) => _onDragEnd(index),
-                  child: Container(
-                    width: blocks[index].size.width,
-                    height: blocks[index].size.height,
-                    color: blocks[index].color,
+          )
+        ],
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          layout = constraints.biggest;
+
+          // Calculate the position of the container in the center of the screen
+          containerPosition = Offset(
+            (layout.width - containerSize) / 2,
+            (layout.height - containerSize) / 2,
+          );
+
+          return Stack(
+            children: [
+              // The 300x300 container where snapping should occur
+              Positioned(
+                left: containerPosition.dx,
+                top: containerPosition.dy,
+                child: Container(
+                  width: containerSize,
+                  height: containerSize,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
                   ),
                 ),
-              );
-            },
-          ),
-        ],
-      );
-    });
+              ),
+              // The draggable blocks
+              ...List.generate(
+                blocks.length,
+                (index) {
+                  return Positioned(
+                    left: blocks[index].offset.dx,
+                    top: blocks[index].offset.dy,
+                    child: GestureDetector(
+                      onLongPress: () {
+                        showCupertinoModalPopup(
+                          context: context,
+                          builder: (context) => CupertinoActionSheet(
+                            cancelButton: CupertinoActionSheetAction(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text("Yo'q"),
+                            ),
+                            title:
+                                const Text("Ushbu blokni o'chirmoqchimisiz?"),
+                            actions: [
+                              CupertinoActionSheetAction(
+                                onPressed: () {
+                                  setState(() {
+                                    blocks[index] = blocks[index].copyWith(
+                                      inside: false,
+                                      offset: blocks[index].initialOffset,
+                                    );
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                isDestructiveAction: true,
+                                child: const Text("Ha"),
+                              )
+                            ],
+                          ),
+                        );
+                      },
+                      onPanUpdate: (details) => _updatePosition(index, details),
+                      onPanEnd: (_) => _onDragEnd(index),
+                      child: Container(
+                        width: blocks[index].size.width,
+                        height: blocks[index].size.height,
+                        color: blocks[index].color,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  static List<Block> getBlocks() {
+    return [
+      Block(
+        size: const Size(200, 100),
+        offset: const Offset(
+          50,
+          blockOffsetY,
+        ),
+      ),
+      Block(
+        size: const Size(100, 150),
+        offset: const Offset(
+          200,
+          blockOffsetY,
+        ),
+      ),
+    ];
   }
 }
 
