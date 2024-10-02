@@ -8,8 +8,11 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(),
-        body: const V1(),
+        appBar: AppBar(
+          title: const Text('Containers in Polygon'),
+          centerTitle: true,
+        ),
+        body: const PolygonArea(),
       ),
     );
   }
