@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:puzzle/variants/v1.dart';
+import 'package:puzzle/variants/v4.dart';
 
 class App extends StatefulWidget {
   const App({super.key});

@@ -1,164 +1,368 @@
-// import 'dart:math';
-// import 'package:flutter/material.dart';
+import 'dart:math';
 
-// class PolygonArea extends StatefulWidget {
-//   const PolygonArea({super.key});
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:puzzle/variants/widgets/custom_app_bar.dart';
 
-//   @override
-//   State<PolygonArea> createState() => _PolygonAreaState();
-// }
+class PolygonArea extends StatefulWidget {
+  const PolygonArea({super.key});
 
-// class _PolygonAreaState extends State<PolygonArea> {
-//   static const double containerSize = 300; // Size of the snapping container
-//   static const double gridSize = 20; // Grid size for snapping inside the container
-//   static Size layout = Size.zero;
+  @override
+  State<PolygonArea> createState() => _PolygonAreaState();
+}
 
-//   // Initial positions for blocks (outside the container)
-//   List<Block> blocks = [
-//     Block(size: const Size(100, 100), offset: const Offset(50, 500), inside: false),
-//     Block(size: const Size(100, 100), offset: const Offset(200, 500), inside: false),
-//   ];
+class _PolygonAreaState extends State<PolygonArea> {
+  static const double containerSize = 300; // Size of the snapping container
+  static const double gridSize =
+      5; // Grid size for snapping inside the container
+  static Size layout = Size.zero;
+  static const double blockOffsetY = 600;
 
-//   Offset containerPosition = Offset.zero; // Will store the position of the container on the screen
+  // Initial positions for blocks (outside the container)
+  List<Block> blocks = getBlocks();
 
-//   // Keep original _updatePosition method logic as requested
-//   void _updatePosition(int index, DragUpdateDetails details) {
-//     final delta = details.delta;
-//     setState(() {
-//       // Move the container by delta
-//       Offset newPosition = blocks[index].offset + delta;
+  Offset containerPosition =
+      Offset.zero; // Will store the position of the container on the screen
 
-//       // Keep the original logic of updating position intact
-//       blocks[index] = blocks[index].copyWith(offset: newPosition);
-//     });
-//   }
+  void _updatePosition(int index, DragUpdateDetails details) {
+    final delta = details.delta;
+    setState(() {
+      Offset newPosition = blocks[index].offset + delta;
 
-//   bool _isInsideContainer(Offset pos, Size size) {
-//     // Check if the block is inside the 300x300 container
-//     return pos.dx >= containerPosition.dx &&
-//         pos.dy >= containerPosition.dy &&
-//         pos.dx + size.width <= containerPosition.dx + containerSize &&
-//         pos.dy + size.height <= containerPosition.dy + containerSize;
-//   }
+      for (var block in blocks) {
+        if (block == blocks[index]) continue;
+        if (_checkOverlap(
+          newPosition & blocks[index].size,
+          block.rect,
+        )) {
+          Rect currentRect = blocks[index].rect;
+          Rect otherRect = block.rect;
+          if (currentRect.right <= otherRect.left ||
+              otherRect.right <= currentRect.left) {
+            newPosition = newPosition.translate(-delta.dx, 0);
+          } else {
+            newPosition = newPosition.translate(0, -delta.dy);
+          }
+        }
+      }
 
-//   void _onDragEnd(int index) {
-//     setState(() {
-//       // If the block enters the container, snap to grid and lock it inside
-//       if (_isInsideContainer(blocks[index].offset, blocks[index].size)) {
-//         blocks[index] = blocks[index].copyWith(inside: true);
-//         blocks[index] = blocks[index].copyWith(
-//           offset: _adjustPositionToBounds(
-//             _snapToGrid(blocks[index].offset),
-//             blocks[index].size,
-//           ),
-//         );
-//       }
-//     });
-//   }
+      if (blocks[index].inside) {
+        // If the block is inside the container, restrict it within the container
+        newPosition = _adjustPositionToBounds(newPosition, blocks[index].size);
+      }
 
-//   Offset _snapToGrid(Offset position) {
-//     // Snap the position to the nearest grid point inside the 300x300 container
-//     double x = ((position.dx - containerPosition.dx) / gridSize).round() * gridSize + containerPosition.dx;
-//     double y = ((position.dy - containerPosition.dy) / gridSize).round() * gridSize + containerPosition.dy;
+      blocks[index] = blocks[index].copyWith(offset: newPosition);
+    });
+  }
 
-//     // Ensure snapping remains inside the container
-//     x = x.clamp(containerPosition.dx, containerPosition.dx + containerSize - gridSize);
-//     y = y.clamp(containerPosition.dy, containerPosition.dy + containerSize - gridSize);
+  bool _checkOverlap(Rect current, Rect other) {
+    return current.overlaps(other);
+  }
 
-//     return Offset(x, y);
-//   }
+  bool _isInsideContainer(Offset pos, Size size) {
+    // Check if the block is inside the 300x300 container
+    return pos.dx >= containerPosition.dx &&
+        pos.dy >= containerPosition.dy &&
+        pos.dx + size.width <= containerPosition.dx + containerSize + 10 &&
+        pos.dy + size.height <= containerPosition.dy + containerSize + 10;
+  }
 
-//   Offset _adjustPositionToBounds(Offset pos, Size size) {
-//     double newX = pos.dx;
-//     double newY = pos.dy;
+  void _onDragEnd(int index) {
+    setState(() {
+      // If the block enters the container, snap to grid and lock it inside
+      if (_isInsideContainer(blocks[index].offset, blocks[index].size)) {
+        final isInside = blocks[index].inside;
+        blocks[index] = blocks[index].copyWith(
+          offset: _adjustPositionToBounds(
+            _snapToGrid(blocks[index].offset),
+            blocks[index].size,
+          ),
+          inside: true,
+        );
+        if (!isInside) {
+          blocks.add(blocks[index].copyWith(
+            inside: false,
+            offset: blocks[index].initialOffset,
+          ));
+        }
+      } else {
+        // If the block is not inside the container, just update the position
+        blocks[index] = blocks[index].copyWith(
+          offset: blocks[index].initialOffset,
+        );
+      }
+    });
+  }
 
-//     // Restrict within the polygon boundaries (300x300 container)
-//     if (newX < containerPosition.dx) newX = containerPosition.dx;
-//     if (newX + size.width > containerPosition.dx + containerSize) newX = containerPosition.dx + containerSize - size.width;
-//     if (newY < containerPosition.dy) newY = containerPosition.dy;
-//     if (newY + size.height > containerPosition.dy + containerSize) newY = containerPosition.dy + containerSize - size.height;
+  Offset _snapToGrid(Offset position) {
+    // Snap the position to the nearest grid point inside the 300x300 container
+    double x =
+        ((position.dx - containerPosition.dx) / gridSize).round() * gridSize +
+            containerPosition.dx;
+    double y =
+        ((position.dy - containerPosition.dy) / gridSize).round() * gridSize +
+            containerPosition.dy;
 
-//     return Offset(newX, newY);
-//   }
+    // Ensure snapping remains inside the container
+    x = x.clamp(
+        containerPosition.dx, containerPosition.dx + containerSize - gridSize);
+    y = y.clamp(
+        containerPosition.dy, containerPosition.dy + containerSize - gridSize);
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return LayoutBuilder(builder: (context, constraints) {
-//       layout = constraints.biggest;
+    return Offset(x, y);
+  }
 
-//       // Calculate the position of the container in the center of the screen
-//       containerPosition = Offset(
-//         (layout.width - containerSize) / 2,
-//         (layout.height - containerSize) / 2,
-//       );
+  Offset _adjustPositionToBounds(Offset pos, Size size) {
+    double newX = pos.dx;
+    double newY = pos.dy;
 
-//       return Stack(
-//         children: [
-//           // The 300x300 container where snapping should occur
-//           Positioned(
-//             left: containerPosition.dx,
-//             top: containerPosition.dy,
-//             child: Container(
-//               width: containerSize,
-//               height: containerSize,
-//               decoration: BoxDecoration(
-//                 border: Border.all(color: Colors.black, width: 2),
-//                 color: Colors.grey.shade300,
-//               ),
-//             ),
-//           ),
-//           // The draggable blocks
-//           ...List.generate(
-//             blocks.length,
-//             (index) {
-//               return Positioned(
-//                 left: blocks[index].offset.dx,
-//                 top: blocks[index].offset.dy,
-//                 child: GestureDetector(
-//                   onPanUpdate: (details) => _updatePosition(index, details),
-//                   onPanEnd: (_) => _onDragEnd(index),
-//                   child: Container(
-//                     width: blocks[index].size.width,
-//                     height: blocks[index].size.height,
-//                     color: blocks[index].color,
-//                   ),
-//                 ),
-//               );
-//             },
-//           ),
-//         ],
-//       );
-//     });
-//   }
-// }
+    // Restrict within the polygon boundaries (300x300 container)
+    if (newX < containerPosition.dx) newX = containerPosition.dx;
+    if (newX + size.width > containerPosition.dx + containerSize) {
+      newX = containerPosition.dx + containerSize - size.width;
+    }
+    if (newY < containerPosition.dy) newY = containerPosition.dy;
+    if (newY + size.height > containerPosition.dy + containerSize) {
+      newY = containerPosition.dy + containerSize - size.height;
+    }
 
-// class Block {
-//   static final _rand = Random();
+    return Offset(newX, newY);
+  }
 
-//   final Size size;
-//   final Color color;
-//   final bool inside; // Tracks whether the block is inside the container
-//   Offset offset;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: CustomAppBar(
+        onPressed: () {
+          setState(() {
+            blocks = getBlocks();
+          });
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            enableDrag: true,
+            showDragHandle: true,
+            useSafeArea: true,
+            builder: (context) => DraggableScrollableSheet(
+              expand: false,
+              minChildSize: 0.4,
+              initialChildSize: 0.4,
+              builder: (context, scrollController) {
+                return GridView.builder(
+                  shrinkWrap: true,
+                  controller: scrollController,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                  ),
+                  itemBuilder: (context, index) {
+                    return const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: CustomBlock(),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          );
+        },
+        child: const Icon(Icons.menu),
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          layout = constraints.biggest;
 
-//   Block({
-//     required this.size,
-//     required this.inside,
-//     Offset? offset,
-//     Color? color,
-//   })  : offset = offset ?? Offset.zero,
-//         color = color ??
-//             Color.fromARGB(255, _rand.nextInt(256), _rand.nextInt(256),
-//                 _rand.nextInt(256));
+          // Calculate the position of the container in the center of the screen
+          containerPosition = Offset(
+            (layout.width - containerSize) / 2,
+            (layout.height - containerSize) / 2,
+          );
 
-//   Block copyWith({
-//     Offset? offset,
-//     bool? inside,
-//   }) {
-//     return Block(
-//       size: size,
-//       color: color,
-//       inside: inside ?? this.inside,
-//       offset: offset ?? this.offset,
-//     );
-//   }
-// }
+          return Stack(
+            children: [
+              // The 300x300 container where snapping should occur
+              Positioned(
+                left: containerPosition.dx,
+                top: containerPosition.dy,
+                child: Container(
+                  width: containerSize,
+                  height: containerSize,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                  ),
+                ),
+              ),
+              // The draggable blocks
+              ...List.generate(
+                blocks.length,
+                (index) {
+                  return Positioned(
+                    left: blocks[index].offset.dx,
+                    top: blocks[index].offset.dy,
+                    child: GestureDetector(
+                      onLongPress: () {
+                        if (!blocks[index].inside) return;
+                        showCupertinoModalPopup(
+                          context: context,
+                          builder: (context) => CupertinoActionSheet(
+                            cancelButton: CupertinoActionSheetAction(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text("Yo'q"),
+                            ),
+                            title:
+                                const Text("Ushbu blokni o'chirmoqchimisiz?"),
+                            actions: [
+                              CupertinoActionSheetAction(
+                                onPressed: () {
+                                  setState(() => blocks.removeAt(index));
+                                  Navigator.pop(context);
+                                },
+                                isDestructiveAction: true,
+                                child: const Text("Ha"),
+                              )
+                            ],
+                          ),
+                        );
+                      },
+                      onPanUpdate: (details) => _updatePosition(index, details),
+                      onPanEnd: (_) => _onDragEnd(index),
+                      child: Container(
+                        width: blocks[index].size.width,
+                        height: blocks[index].size.height,
+                        color: blocks[index].color,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  static List<Block> getBlocks() {
+    return [
+      Block(
+        size: const Size(200, 100),
+        offset: const Offset(
+          50,
+          blockOffsetY,
+        ),
+      ),
+      Block(
+        size: const Size(100, 150),
+        offset: const Offset(
+          200,
+          blockOffsetY,
+        ),
+      ),
+    ];
+  }
+}
+
+class Block {
+  static final _rand = Random();
+
+  final Size size;
+  final Color color;
+  final bool inside; // Tracks whether the block is inside the container
+  Offset offset;
+  final Offset initialOffset;
+
+  Block({
+    required this.size,
+    this.inside = false,
+    Offset? offset,
+    Offset? initialOffset,
+    Color? color,
+  })  : offset = offset ?? Offset.zero,
+        initialOffset = initialOffset ?? offset ?? Offset.zero,
+        color = color ??
+            Color.fromARGB(
+              255,
+              _rand.nextInt(256),
+              _rand.nextInt(256),
+              _rand.nextInt(256),
+            );
+
+  factory Block.random() {
+    return Block(
+      size: Size(
+        (_rand.nextInt(30) + 1) * 10,
+        (_rand.nextInt(30) + 1) * 10,
+      ),
+    );
+  }
+
+  Rect get rect => offset & size;
+
+  Block copyWith({
+    Offset? offset,
+    bool? inside,
+  }) {
+    return Block(
+      size: size,
+      color: color,
+      initialOffset: initialOffset,
+      inside: inside ?? this.inside,
+      offset: offset ?? this.offset,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is Block &&
+        other.size == size &&
+        other.color == color &&
+        other.inside == inside &&
+        other.offset == offset;
+  }
+
+  @override
+  int get hashCode {
+    return size.hashCode ^ color.hashCode ^ inside.hashCode ^ offset.hashCode;
+  }
+}
+
+class CustomBlock extends StatefulWidget {
+  const CustomBlock({super.key});
+
+  @override
+  State<CustomBlock> createState() => _CustomBlockState();
+}
+
+class _CustomBlockState extends State<CustomBlock> {
+  late final Block block;
+  @override
+  void initState() {
+    block = Block.random();
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: block.size.width,
+          height: block.size.height,
+          decoration: BoxDecoration(
+            color: block.color,
+          ),
+        ),
+        Text(block.size.toString()),
+      ],
+    );
+  }
+}

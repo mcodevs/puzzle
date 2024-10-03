@@ -180,6 +180,7 @@ class _PolygonAreaState extends State<PolygonArea> {
                     top: blocks[index].offset.dy,
                     child: GestureDetector(
                       onLongPress: () {
+                        if (!blocks[index].inside) return;
                         showCupertinoModalPopup(
                           context: context,
                           builder: (context) => CupertinoActionSheet(
@@ -192,12 +193,7 @@ class _PolygonAreaState extends State<PolygonArea> {
                             actions: [
                               CupertinoActionSheetAction(
                                 onPressed: () {
-                                  setState(() {
-                                    blocks[index] = blocks[index].copyWith(
-                                      inside: false,
-                                      offset: blocks[index].initialOffset,
-                                    );
-                                  });
+                                  setState(() => blocks.removeAt(index));
                                   Navigator.pop(context);
                                 },
                                 isDestructiveAction: true,
