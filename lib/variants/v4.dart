@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:puzzle/variants/widgets/custom_app_bar.dart';
 
 class PolygonArea extends StatefulWidget {
   const PolygonArea({super.key});
@@ -184,14 +185,8 @@ class _PolygonAreaState extends State<PolygonArea> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text("Polygon Area"),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () => setState(() => blocks.clear()),
-            ),
-          ],
+        appBar: CustomAppBar(
+          onPressed: () => setState(() => blocks.clear()),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: _showBlockPicker,
